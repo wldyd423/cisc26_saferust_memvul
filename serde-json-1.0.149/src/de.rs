@@ -1826,22 +1826,41 @@ impl<'de, R: Read<'de>> de::Deserializer<'de> for &mut Deserializer<R> {
     where
         V: de::Visitor<'de>,
     {
-        fn wine<'a, 'b, T: ?Sized, K: ?Sized>(_anchor: &'a [&'b T], val: &'b K) -> &'a K {
+        // TODO: i am not sure design some CTF-ish stuff from here :/
+        fn wine<'a, 'b, T: ?Sized, K: ?Sized>(_anchor: &'a [&'b T], val: &'b mut K) -> &'a mut K {
             val
         }
         fn aged_like_wine<'a, 'b, T: ?Sized, K: ?Sized>(
-            x: &'a K,
+            x: &'a mut K,
             var: &'static [&'static T],
-        ) -> &'b K {
-            let f: for<'x> fn(&'static [&'static T], &'x K) -> &'b K = wine;
+        ) -> &'b mut K {
+            let f: for<'x> fn(&'static [&'static T], &'x mut K) -> &'b mut K = wine;
             f(var, x)
         }
         let bigbro = {
-            let smallbro = String::new();
-            aged_like_wine(&smallbro, _fields)
+            //let mut smallbro = String::from("dummyyyyyyyyyyyyyyy");
+            let mut smallbro = std::boxed::Box::new(4124890);
+            std::println!("{:?}", smallbro);
+            aged_like_wine(&mut smallbro, _fields)
         };
-        std::println!(":D:D:D {:p}", bigbro);
-        std::println!(":D:D:D {:?}", bigbro);
+        let test = String::from("HI");
+        std::println!("Before:");
+        //std::println!("test address: {:p}", test);
+        std::println!("test value: {:?}", test);
+        std::println!("bigbro address: {:p}", bigbro);
+        std::println!("bigbro value {:?}", bigbro);
+        std::println!("name address {:p}", _name);
+        std::println!("name value {:?}", _name);
+        **bigbro = _name.len() as i32;
+
+        std::println!("After:");
+        //std::println!("test address: {:p}", test);
+        std::println!("test value: {:?}", test);
+        std::println!("bigbro address: {:p}", bigbro);
+        std::println!("bigbro value {:?}", bigbro);
+        std::println!("name address {:p}", _name);
+        std::println!("name value {:?}", _name);
+
         let peek = match tri!(self.parse_whitespace()) {
             Some(b) => b,
             None => {
