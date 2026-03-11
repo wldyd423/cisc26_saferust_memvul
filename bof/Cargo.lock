@@ -3,5 +3,5 @@
 version = 4
 
 [[package]]
-name = "poc1"
+name = "bof"
 version = "0.1.0"
