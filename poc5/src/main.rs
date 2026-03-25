@@ -1,3 +1,5 @@
+use std::io::stdin;
+
 fn run(input: &String) -> &String {
     const UNIT: &'static &'static () = &&();
     #[inline(never)]
@@ -39,7 +41,7 @@ fn run(input: &String) -> &String {
         let mut actual = [0usize; 2];
         actual[sentinel.as_ptr() as usize] = ptr as usize;
         actual[sentinel.len()] = len;
-        std::mem::forget(sentinel);
+        //std::mem::forget(sentinel);
         transmute::<_, &mut [u8]>(actual)
     }
     use std::hint::black_box;
@@ -56,8 +58,9 @@ fn run(input: &String) -> &String {
     input
 }
 fn main() {
-    run(&String::from(
-        "HELLLLLLLOOOaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-    ));
+    println!("[*] run @ 0x{:x}", run as usize);
+    let mut input = String::new();
+    stdin().read_line(&mut input);
+    run(&input);
     println!("Hello, world!");
 }
