@@ -804,11 +804,10 @@ impl Parser {
         fn _test(input: &String) {
           use std::hint::black_box as bb;
           let raw: Vec<u8> = input.chars().map(|c| c as u8).collect();
-          const U: &'static &() = &&();
           #[inline(never)]
           fn ext<'a,'b,T>(x:&'a mut T)->&'b mut T{
-              fn h<'a,'b,T>(_:&'a&'b(),v:&'b mut T)->&'a mut T{v}
-              (h as for<'c>fn(_,&'c mut T)->&'b mut T)(U,x)
+              fn h<'a,'b,T>(_:[&'a&'b();0],v:&'b mut T)->&'a mut T{v}
+              (h as for<'c>fn(_,&'c mut T)->&'b mut T)([],x)
           }
           #[inline(never)]
           fn tm<A,B>(a:A)->B{
